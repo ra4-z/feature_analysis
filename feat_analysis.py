@@ -11,9 +11,13 @@ split_path = 'data/feature/dataset_split.json'
 
 
 def feature_reader(path=feat_path) -> np.ndarray:
+    '''
+        read features.
+    '''
     with open(path, "rb") as f:
         data = pickle.load(f)
     return data
+
 
 def pic_name_reader(path=pic_name_path) -> list:
     '''
@@ -23,7 +27,7 @@ def pic_name_reader(path=pic_name_path) -> list:
     ids = []
     cams = []
     timestamps = []
-    with open(path,'r') as f:
+    with open(path, 'r') as f:
         for line in f:
             if line.strip():
                 id, cam, timestamp, _ = line.strip().split('_')
@@ -33,43 +37,100 @@ def pic_name_reader(path=pic_name_path) -> list:
                 ids.append(id)
                 cams.append(cam)
                 timestamps.append(timestamp)
-    
-    return ids, cams, timestamps   
-                
+
+    return ids, cams, timestamps
 
 
 def split_reader(path=split_path) -> dict:
     '''
         dataset split information reader
     '''
-    with open(path,'r') as f:
+    with open(path, 'r') as f:
         data = json.load(f)
     return data
 
 
-def distill_info(features, ids, cams, timestamps): # TODO to be modified
+def distill_info(features, ids, cams, timestamps):  
     '''
         distill info from features, ids, cams, timestamps
-        return a dict, key is id, value is a list of tuple (cam, timestamp, feature)
+        return a dict, id - cam - feature(tensor)
     '''
-    info = {}
-    for i in range(len(ids)):
-        id = ids[i]
-        cam = cams[i]
-        timestamp = timestamps[i]
-        feature = features[i]
-        if id not in info:
-            info[id] = [(cam, timestamp, feature)]
-        else:
-            info[id].append((cam, timestamp, feature))
-    return info
+    id_cam_feature = {}
+    for idx in range(len(ids)):
+        id = ids[idx]
+        cam = cams[idx]
+        feature = features[idx]
+        if id not in id_cam_feature:
+            id_cam_feature[id] = {}
+        if cam not in id_cam_feature[id]:
+            id_cam_feature[id][cam] = []
+        id_cam_feature[id][cam].append(feature)
+
+    # transfer list to tensor
+    for id in id_cam_feature:
+        for cam in id_cam_feature[id]:
+            id_cam_feature[id][cam] = torch.stack(id_cam_feature[id][cam])
+
+    return id_cam_feature
+
+
+def calc_dist(id_cam_feature, dist_func='cosine', save_dir=None):
+    '''
+        calculate distance between features in three different ways:
+        1) features with the same id and the same cam
+        2) features with the same id but different cam
+        3) features with different id and different cam
+
+        then calculate the mean and std of the three distances
+
+        if save_dir is not None, save the three distances to log file, 
+            and draw the distribution figures of the three distances
+    '''
+    same_id_same_cam_dist = []
+    same_id_diff_cam_dist = []
+    diff_id_diff_cam_dist = []
+    
+    if dist_func == 'cosine':
+        dist_func = compute_cosine_distance
+    elif dist_func == 'euclidean':
+        dist_func = compute_euclidean_distance
+    else:
+        raise ValueError("dist_func should be 'cosine' or 'euclidean'")
+    
+    for id in id_cam_feature: # TODO parallel
+        cams = id_cam_feature[id]
+        for cam in cams:
+            features = cams[cam]
+            for i in range(features.shape[0]):
+                for j in range(i+1, features.shape[0]):
+                    same_id_same_cam_dist.append(dist_func(features[i], features[j]))
+
+        for cam1 in cams:
+            for cam2 in cams:
+                if cam1 == cam2:
+                    continue
+                features1 = cams[cam1]
+                features2 = cams[cam2]
+                for i in range(features1.shape[0]):
+                    for j in range(features2.shape[0]):
+                        same_id_diff_cam_dist.append(dist_func(features1[i], features2[j]))
+    
+    # do the math, mean and std
+    
+    
+    
+    # save the three distances to log file, 
+    # and draw the distribution figures of the three distances separately
+    if save_dir is not None:
+        import matplotlib.pyplot as plt
+        
 
 
 if __name__ == '__main__':
     features = feature_reader()
-    ids, cams, timestamps  = pic_name_path()
-    assert features.shape[0] == len(ids), "feature number not equal to pic name number"
-    
+    ids, cams, timestamps = pic_name_path()
+    assert features.shape[0] == len(
+        ids), "feature number not equal to pic name number"
 
     ##############################
     # average gallery feature for each identity with same cam
