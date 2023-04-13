@@ -22,7 +22,7 @@ def feature_reader(path=feat_path) -> np.ndarray:
 def pic_name_reader(path=pic_name_path) -> list:
     '''
         read pic name from txt file
-        pic name is in the format of VeRi776, e.g. 0001_c001_000051_00.jpg
+        pic name is in the format of VeRi776, e.g. 0001_c001_00005100_00.jpg
     '''
     ids = []
     cams = []
@@ -128,7 +128,7 @@ def calc_dist(id_cam_feature, dist_func='cosine', save_dir=None):
 
 if __name__ == '__main__':
     features = feature_reader()
-    ids, cams, timestamps = pic_name_path()
+    ids, cams, timestamps = pic_name_reader()
     assert features.shape[0] == len(
         ids), "feature number not equal to pic name number"
 

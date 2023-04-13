@@ -14,10 +14,13 @@ This repo is built for my feature analysis on vehicle re-identification.
 ```python
 ├── data
 │   ├── feature
-│   │   ├── feature.pkl         # 保存的特征
-│   │   ├── pic_name.txt        # 图片名字，与特征一一对应
-│   │   └── dataset_split.json  # 数据集划分
-│   ├── picture                 # 图片
+│   │   ├── train
+│   │   |   ├── feature.pkl         # 保存的特征
+│   │   |   ├── pic_name.txt        # 图片名字，与特征一一对应
+│   │   ├── test
+│   │   |   ├── feature.pkl         
+│   │   |   ├── pic_name.txt        
+│   ├── picture                     # 图片
 │   │   ├── 0001_c1_00000001.jpg
 │   │   ├── 0001_c1_00000002.jpg
 ```
